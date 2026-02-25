@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # Vulnerable SSH Server
+  vulnerable-server:
+    build:
+      context: ./vulnerable_server
+      dockerfile: Dockerfile
+    container_name: terrapin-vulnerable-server
+    hostname: vulnerable-server
+    networks:
+      terrapin-net:
+        ipv4_address: 172.20.0.10
+    ports:
+      - "2222:22"
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./logs:/var/log/ssh
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "22"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Attacker Machine (MITM)
+  attacker:
+    build:
+      context: .
+      dockerfile: ./attacker/Dockerfile
+    container_name: terrapin-attacker
+    hostname: attacker
+    networks:
+      terrapin-net:
+        ipv4_address: 172.20.0.20
+    ports:
+      - "3333:2222"  # For MITM proxy
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    privileged: true
+    volumes:
+      - ./poc_exploit:/attack/poc_exploit
+      - ./attacker/tools:/attack/tools
+      - ./attacker/mitm_setup.sh:/attack/mitm_setup.sh
+      - ./captures:/attack/captures
+      - ./logs:/attack/logs
+    depends_on:
+      - vulnerable-server
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
+  # SSH Client
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: terrapin-client
+    hostname: client
+    networks:
+      terrapin-net:
+        ipv4_address: 172.20.0.30
+    depends_on:
+      - vulnerable-server
+      - attacker
+    volumes:
+      - ./logs:/client/logs
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
+networks:
+  terrapin-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+          gateway: 172.20.0.1
+
+volumes:
+  logs:
+  captures:

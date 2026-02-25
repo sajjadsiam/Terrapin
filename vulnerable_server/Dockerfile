@@ -1,5 +1,8 @@
 FROM ubuntu:22.04
 
+# Set non-interactive installation
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Install OpenSSH server (older vulnerable version for demonstration)
 RUN apt-get update && \
     apt-get install -y openssh-server && \

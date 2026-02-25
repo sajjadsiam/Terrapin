@@ -1,5 +1,8 @@
 FROM ubuntu:22.04
 
+# Set non-interactive installation
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Install SSH client and tools
 RUN apt-get update && \
     apt-get install -y \

@@ -32,15 +32,15 @@ COPY poc_exploit /attack/poc_exploit
 # Install Python dependencies
 RUN pip3 install -r /attack/poc_exploit/requirements.txt
 
-# Copy demo scripts
-COPY demo /attack/demo
+# Copy manual attack demo
+COPY manual_attack_demo.py /attack/manual_attack_demo.py
 
 # Copy attacker tools
 COPY attacker/tools /attack/tools
 COPY attacker/mitm_setup.sh /attack/mitm_setup.sh
 RUN chmod +x /attack/mitm_setup.sh
 RUN chmod +x /attack/tools/*.sh 2>/dev/null || true
-RUN chmod +x /attack/demo/*.sh 2>/dev/null || true
+RUN chmod +x /attack/manual_attack_demo.py
 
 # Create directories for captures
 RUN mkdir -p /attack/captures /attack/logs

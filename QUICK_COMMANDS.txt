@@ -1,0 +1,80 @@
+# TERRAPIN ATTACK - QUICK REFERENCE
+# Copy-paste these commands directly!
+
+# ============================================================
+# STEP 1: START LAB
+# ============================================================
+docker-compose up -d
+docker-compose ps    # Verify all 3 containers are running
+
+# ============================================================
+# STEP 2: RUN ATTACK (Choose ONE method)
+# ============================================================
+
+# METHOD A: Two Terminal Method (RECOMMENDED - See Attack Live)
+# ---------------------------------------------------------------
+# Terminal 1:
+docker exec -it terrapin-attacker python3 /attack/manual_attack_demo.py
+
+# Terminal 2 (wait for "Waiting for client..." message):
+docker exec -it terrapin-client ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 testuser@attacker
+# Password: password123
+
+# Watch Terminal 1 for: 🎯 ATTACK SUCCESS!
+
+
+# METHOD B: Background Attack (One Command)
+# ---------------------------------------------------------------
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "docker exec -it terrapin-attacker python3 /attack/manual_attack_demo.py"; Start-Sleep -Seconds 3; docker exec -it terrapin-client ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 testuser@attacker
+# Password: password123
+
+# ============================================================
+# STEP 3: CAPTURE WITH WIRESHARK (Optional)
+# ============================================================
+
+# Start packet capture:
+docker exec -d terrapin-attacker tcpdump -i eth0 -w /attack/captures/attack.pcap 'tcp port 22'
+
+# Run attack (Method A or B above)
+
+# Stop capture after attack:
+docker exec terrapin-attacker pkill tcpdump
+
+# Copy to Windows:
+docker cp terrapin-attacker:/attack/captures/attack.pcap d:\Terrapin\captures\
+
+# Open captures\attack.pcap in Wireshark
+# Filter: ssh
+# Look for missing SSH_MSG_EXT_INFO (type 7) after NEWKEYS (type 21)
+
+# ============================================================
+# VERIFICATION COMMANDS
+# ============================================================
+
+# Check container status:
+docker-compose ps
+
+# View server logs:
+docker logs terrapin-vulnerable-server
+
+# Check SSH config (vulnerable ciphers):
+docker exec terrapin-vulnerable-server cat /etc/ssh/sshd_config | Select-String "Ciphers"
+
+# Direct connection (NO attack - comparison):
+docker exec -it terrapin-client ssh -o StrictHostKeyChecking=no testuser@vulnerable-server
+# Password: password123
+
+# ============================================================
+# STOP LAB
+# ============================================================
+docker-compose down
+
+# ============================================================
+# NOTES
+# ============================================================
+# - Password for all SSH connections: password123
+# - Attacker proxy port: 2222
+# - Direct server port: 22
+# - Attack drops SSH_MSG_EXT_INFO (message type 7)
+# - Connection succeeds but security extensions removed
+# ============================================================
